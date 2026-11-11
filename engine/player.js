@@ -33,7 +33,11 @@
     lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
     key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',
     queue: '<rect x="3" y="6" width="4" height="12" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="17" y="6" width="4" height="12" rx="1"/>',
-    box: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>'
+    box: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+    bank: '<path d="M3 9.5 12 4l9 5.5z"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/>',
+    shop: '<path d="M3.5 4h17l-1 5.5h-15z"/><path d="M4.5 9.5V20h15V9.5"/><path d="M10 20v-5h4v5"/>',
+    switch: '<rect x="3" y="8" width="18" height="8" rx="2"/><path d="M7 12h.01M10.5 12h.01"/><path d="M14 12h4"/><path d="M8 8V5M16 8V5M8 16v3M16 16v3"/>',
+    reserve: '<path d="M12 3 3 8h18z"/><path d="M5 9v8M12 9v8M19 9v8"/><path d="M3 20h18"/><circle cx="12" cy="6.5" r=".8"/>'
   };
 
   var GLYPH = {
