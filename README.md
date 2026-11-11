@@ -102,4 +102,6 @@ Every step has its own URL (`#step-7`), so you can link straight to it.
 
 ## Deploy
 
-`.github/workflows/pages.yml` publishes the repo to GitHub Pages on every push to `main`. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+GitHub Pages serves the `main` branch root directly (**Settings → Pages → Deploy from a branch → `main` / `/ (root)`**). Every push to `main` goes live in about a minute. `.nojekyll` makes Pages serve files as-is, including `_template/`.
+
+Live site: https://vijaygupta18.github.io/how-it-works/
