@@ -30,5 +30,14 @@ window.HIW_EXPLAINERS = [
     topics: 'OAuth 2.0 · OpenID Connect · PKCE · JWT · Passkeys',
     steps: 11,
     minutes: 8
+  },
+  {
+    slug: 'whatsapp-message',
+    title: 'How WhatsApp delivers an end-to-end encrypted message',
+    description: 'Follow "Dinner at 8?" from Alice to Bob\u2019s phone and laptop: publishing public keys, the X3DH key agreement, encrypting once per device, the Noise-encrypted connection, what each tick means, offline delivery, the Double Ratchet, photos, group Sender Keys, and verifying security codes.',
+    chapters: ['Publish keys', 'Start a session', 'Encrypt & send', 'Deliver & read', 'New keys', 'Photos, groups, trust'],
+    topics: 'Signal Protocol · X3DH · Double Ratchet · Noise · E2EE',
+    steps: 13,
+    minutes: 8
   }
 ];
