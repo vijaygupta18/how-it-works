@@ -306,6 +306,12 @@
     if ('ResizeObserver' in window) new ResizeObserver(onResize).observe(this.stage);
     else window.addEventListener('resize', onResize);
 
+    // Follow step links (#step-N) while the page is already open.
+    window.addEventListener('hashchange', function () {
+      var m = /step-(\d+)/.exec(location.hash);
+      if (m && parseInt(m[1], 10) - 1 !== self.i) self.go(parseInt(m[1], 10) - 1, true);
+    });
+
     document.addEventListener('visibilitychange', function () {
       if (document.hidden && self.playing) self.togglePlay();
     });
