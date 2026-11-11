@@ -534,8 +534,9 @@
     // A speech bubble appears when a message arrives at that actor; otherwise right away.
     var after = {}, now = [];
     Object.keys(say).forEach(function (id) {
+      // Show it when the last message addressed to this actor arrives.
       var idx = -1;
-      packets.forEach(function (p, k) { if (idx < 0 && p.path[p.path.length - 1] === id) idx = k; });
+      packets.forEach(function (p, k) { if (p.path[p.path.length - 1] === id) idx = k; });
       if (idx >= 0) (after[idx] = after[idx] || []).push(id);
       else now.push(id);
     });
