@@ -1,15 +1,16 @@
 /*
- * The list of explainers shown on the home page.
- * To add one: copy explainers/_template/ to explainers/<slug>/, edit its flow.js,
+ * Explainers listed on the home page, in order.
+ * To add one: copy explainers/_template/ to explainers/<slug>/, write its flow.js,
  * then add an entry here.
  */
 window.HIW_EXPLAINERS = [
   {
     slug: 'url-to-page',
     title: 'What happens when you type a URL and press Enter',
-    description: 'Follow a single page load through DNS resolution, NAT, the TCP and TLS handshakes, HTTP/2, the backend, and the browser rendering pipeline.',
-    tags: ['Networking', 'DNS', 'TLS', 'HTTP', 'Browsers'],
+    description: 'One page load, end to end: URL parsing and caches, recursive DNS resolution, ARP and NAT, the TCP three-way handshake, the TLS 1.3 handshake and certificate checks, HTTP/2 through a CDN to the app and database, and the browser rendering pipeline.',
+    chapters: ['URL & cache', 'DNS lookup', 'TCP handshake', 'TLS handshake', 'HTTP & backend', 'Rendering'],
+    topics: 'DNS · ARP · NAT · TCP · TLS 1.3 · HTTP/2 · CDN',
     steps: 24,
-    colors: ['#64748b', '#0e7490', '#7c3aed', '#2563eb', '#047857', '#c2410c', '#b91c1c', '#be185d']
+    minutes: 12
   }
 ];

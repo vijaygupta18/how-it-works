@@ -1,61 +1,84 @@
 /*
- * How It Works — step-by-step animation player.
- * No dependencies. An explainer calls HowItWorks.mount(flow) with a data object
- * describing actors (boxes on the stage), links between them, and steps.
- * See README.md for the full flow format.
+ * How It Works — step-by-step animation player. No dependencies.
+ *
+ * An explainer calls HowItWorks.mount(flow). The flow describes:
+ *   chapters  big parts of the story (shown in the progress bar)
+ *   zones     labelled areas on the stage ("Your home", "The website")
+ *   actors    the things that talk to each other
+ *   links     roads between actors (optionally bent with waypoints per layout)
+ *   steps     what happens, in order
+ * See README.md for the full format.
  */
 (function () {
   'use strict';
 
   var SVGNS = 'http://www.w3.org/2000/svg';
 
-  // 24x24 stroke icons. Add more here and reference them by name in a flow.
+  // 24×24 stroke icons used inside actor tiles.
   var ICONS = {
-    browser: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18"/><path d="M6 6.5h.01M8.5 6.5h.01"/>',
-    os: '<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+    browser: '<rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="M2.5 9h19"/><path d="M5.5 6.5h.01M8 6.5h.01M10.5 6.5h.01"/><path d="M7 13h6M7 16h9"/>',
+    laptop: '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/>',
+    os: '<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
     router: '<rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 16.5h.01M10.5 16.5h.01"/><path d="M15 13V9"/><path d="M12.2 7.2a4 4 0 0 1 5.6 0"/><path d="M10 4.8a7.5 7.5 0 0 1 10 0"/>',
+    book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H19v-3"/><path d="M8 7h7M8 10h5"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/>',
-    server: '<rect x="4" y="3" width="16" height="7" rx="1.5"/><rect x="4" y="14" width="16" height="7" rx="1.5"/><path d="M8 6.5h.01M8 17.5h.01"/>',
+    tree: '<circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="19" r="2.2"/><circle cx="12" cy="19" r="2.2"/><circle cx="19" cy="19" r="2.2"/><path d="M12 7.2V17M12 11H5v5.8M12 11h7v5.8"/>',
+    server: '<rect x="4" y="3" width="16" height="7" rx="1.5"/><rect x="4" y="14" width="16" height="7" rx="1.5"/><path d="M8 6.5h.01M8 17.5h.01M12 6.5h4M12 17.5h4"/>',
+    edge: '<path d="M4 20V10l8-6 8 6v10"/><path d="M9 20v-6h6v6"/><path d="M2 20h20"/>',
     db: '<ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
     cloud: '<path d="M7 19h10.5a4.5 4.5 0 0 0 .4-9A6 6 0 0 0 6.3 11.5 3.8 3.8 0 0 0 7 19z"/>',
     lb: '<circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 12h10M7 11l10-5M7 13l10 5"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     phone: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>',
-    box: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+    lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
     key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',
-    queue: '<rect x="3" y="6" width="4" height="12" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="17" y="6" width="4" height="12" rx="1"/>'
+    queue: '<rect x="3" y="6" width="4" height="12" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="17" y="6" width="4" height="12" rx="1"/>',
+    box: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>'
+  };
+
+  var GLYPH = {
+    envelope: '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/>',
+    lock: ICONS.lock
   };
 
   var UI = {
-    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
-    theme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>',
-    restart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
+    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>',
+    moon: '<svg class="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+    sun: '<svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
     prev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
     next: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
-    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>',
-    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4.5" height="16" rx="1"/><rect x="13.5" y="4" width="4.5" height="16" rx="1"/></svg>',
-    replay: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M10 9v6l5-3z" fill="currentColor"/></svg>'
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 5.2v13.6a1 1 0 0 0 1.53.85l10.6-6.8a1 1 0 0 0 0-1.7L9.03 4.35A1 1 0 0 0 7.5 5.2z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4.2" height="15" rx="1"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1"/></svg>',
+    replay: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
+    chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
   };
 
-  // Default stage geometry. "wide" is used for landscape stages, "tall" for portrait (phones).
+  // Stage geometry. "wide" for landscape stages, "tall" for phones in portrait.
   var LAYOUTS = {
-    wide: { w: 1000, h: 560, box: [150, 60], label: 14, sub: 11, icon: 22, packet: 7, pill: 22, pillFont: 12 },
-    tall: { w: 400, h: 420, box: [116, 44], label: 11.5, sub: 8.8, icon: 15, packet: 5.5, pill: 18, pillFont: 10.5 }
+    wide: { w: 1000, h: 572, tile: 56, radius: 14, label: 15, sub: 11.5, showSub: true, pill: 28, pillFont: 12.5, bubble: 13.5, bubbleChars: 24, zoneFont: 11, zonePad: [16, 24] },
+    tall: { w: 400, h: 420, tile: 40, radius: 11, label: 12, sub: 9, showSub: false, pill: 21, pillFont: 10, bubble: 11, bubbleChars: 20, zoneFont: 8.5, zonePad: [10, 16] }
   };
 
-  var SPEEDS = [0.5, 1, 1.5, 2, 3];
-  var HOP_MS = 900;
+  var SPEEDS = [0.75, 1, 1.5, 2];
+  var reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-  var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* ---------- helpers ---------- */
 
-  function el(tag, attrs, parent, ns) {
-    var node = ns === false ? document.createElement(tag) : document.createElementNS(SVGNS, tag);
-    if (attrs) for (var k in attrs) if (attrs[k] != null) node.setAttribute(k, attrs[k]);
-    if (parent) parent.appendChild(node);
-    return node;
+  function svg(tag, attrs, parent) {
+    var n = document.createElementNS(SVGNS, tag);
+    if (attrs) for (var k in attrs) if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
   }
-  function h(tag, attrs, parent) { return el(tag, attrs, parent, false); }
+  function h(tag, attrs, parent) {
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs) if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function easeInOut(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   function dedent(str) {
     var lines = String(str).replace(/^\n+|\s+$/g, '').split('\n');
@@ -64,10 +87,38 @@
     return lines.map(function (l) { return l.slice(min === Infinity ? 0 : min); }).join('\n');
   }
 
-  function words(html) {
-    var tmp = document.createElement('div');
-    tmp.innerHTML = html || '';
-    return (tmp.textContent || '').split(/\s+/).filter(Boolean).length;
+  function countWords(html) {
+    if (!html) return 0;
+    var d = document.createElement('div');
+    d.innerHTML = html;
+    return (d.textContent || '').split(/\s+/).filter(Boolean).length;
+  }
+
+  function wrapWords(text, max) {
+    var words = String(text).split(/\s+/), lines = [], line = '';
+    words.forEach(function (w) {
+      if (!line) line = w;
+      else if ((line + ' ' + w).length <= max) line += ' ' + w;
+      else { lines.push(line); line = w; }
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  // Polyline with rounded corners, as SVG path data.
+  function roundedPath(pts, r) {
+    var d = 'M' + pts[0][0] + ',' + pts[0][1];
+    for (var i = 1; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1], p1 = pts[i], p2 = pts[i + 1];
+      var l1 = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+      var l2 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      var rr = Math.min(r, l1 / 2, l2 / 2);
+      var a = [p1[0] - (p1[0] - p0[0]) / l1 * rr, p1[1] - (p1[1] - p0[1]) / l1 * rr];
+      var b = [p1[0] + (p2[0] - p1[0]) / l2 * rr, p1[1] + (p2[1] - p1[1]) / l2 * rr];
+      d += ' L' + a[0] + ',' + a[1] + ' Q' + p1[0] + ',' + p1[1] + ' ' + b[0] + ',' + b[1];
+    }
+    var last = pts[pts.length - 1];
+    return d + ' L' + last[0] + ',' + last[1];
   }
 
   function fitText(t, maxW) {
@@ -80,108 +131,138 @@
     }
   }
 
-  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-  var ease = function (t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; };
+  /* ---------- player ---------- */
 
   function Player(flow) {
     this.flow = flow;
     this.steps = flow.steps || [];
     this.layouts = Object.assign({}, LAYOUTS, flow.layouts || {});
-    this.phases = flow.phases || {};
     this.i = 0;
     this.speedIdx = 1;
     this.playing = false;
-    this.animating = false;
+    this.busy = false;
     this.token = 0;
     this.layoutName = null;
+
+    // Chapters in order, with the steps that belong to each.
+    var chapters = (flow.chapters || []).slice();
+    var byId = {};
+    chapters.forEach(function (c) { byId[c.id] = c; c.steps = []; });
+    this.steps.forEach(function (s, idx) {
+      var c = byId[s.chapter];
+      if (!c) { c = byId[s.chapter] = { id: s.chapter || 'main', title: s.chapter || 'Steps', steps: [] }; chapters.push(c); }
+      c.steps.push(idx);
+    });
+    this.chapters = chapters.filter(function (c) { return c.steps.length; });
+    this.chapterOf = {};
+    var self = this;
+    this.chapters.forEach(function (c, ci) { c.steps.forEach(function (si) { self.chapterOf[si] = ci; }); });
+
     this.build();
     this.bind();
-    var m = /step-(\d+)/.exec(location.hash);
-    var start = m ? clamp(parseInt(m[1], 10) - 1, 0, this.steps.length - 1) : 0;
     this.chooseLayout();
-    this.go(start, true);
+    var m = /step-(\d+)/.exec(location.hash);
+    this.go(m ? parseInt(m[1], 10) - 1 : 0, true);
   }
 
   Player.prototype.build = function () {
-    var f = this.flow;
-    document.title = f.title + ' · How It Works';
+    var f = this.flow, self = this;
+    document.title = (f.shortTitle || f.title) + ' · How It Works';
     var root = this.root = h('div', { class: 'hiw' }, document.body);
 
+    // Header
     var top = h('header', { class: 'hiw-top' }, root);
-    var back = h('a', { class: 'icon-btn hiw-back', href: f.home || '../../', 'aria-label': 'All explainers', title: 'All explainers' }, top);
-    back.innerHTML = UI.back;
+    var home = h('a', { class: 'hiw-home', href: f.home || '../../' }, top);
+    home.innerHTML = UI.back + '<span>How It Works</span>';
     var titles = h('div', { class: 'hiw-titles' }, top);
     h('h1', { class: 'hiw-title' }, titles).textContent = f.title;
-    if (f.subtitle) h('p', { class: 'hiw-subtitle' }, titles).textContent = f.subtitle;
-    var themeBtn = h('button', { class: 'icon-btn', 'data-theme-toggle': '', 'aria-label': 'Toggle dark mode', title: 'Toggle dark mode' }, top);
-    themeBtn.innerHTML = UI.theme;
+    var tbtn = h('button', { class: 'iconbtn', type: 'button', 'data-theme-toggle': '', 'aria-label': 'Switch between light and dark', title: 'Light / dark' }, top);
+    tbtn.innerHTML = UI.moon + UI.sun;
 
+    // Stage
     var main = h('main', { class: 'hiw-main' }, root);
-    this.stage = h('section', { class: 'hiw-stage', 'aria-label': 'Animation stage' }, main);
-    this.svg = el('svg', { role: 'img', 'aria-label': f.title + ' diagram', preserveAspectRatio: 'xMidYMid meet' }, this.stage);
+    this.stage = h('section', { class: 'hiw-stage', 'aria-label': 'Animated diagram' }, main);
+    this.svg = svg('svg', { role: 'img', 'aria-label': f.title, preserveAspectRatio: 'xMidYMid meet' }, this.stage);
     this.layers = {};
-    var self = this;
-    ['links', 'trails', 'packets', 'actors', 'notes'].forEach(function (n) {
-      self.layers[n] = el('g', { class: 'hiw-layer-' + n }, self.svg);
+    ['zones', 'pipes', 'links', 'trails', 'actors', 'packets', 'bubbles'].forEach(function (n) {
+      self.layers[n] = svg('g', { class: 'hiw-l-' + n }, self.svg);
     });
 
-    var panel = this.panel = h('aside', { class: 'hiw-panel' }, main);
-    this.phaseNav = h('nav', { class: 'hiw-phases', 'aria-label': 'Phases' }, panel);
+    // Legend: what the colours mean
+    var legend = h('div', { class: 'hiw-legend', 'aria-hidden': 'true' }, this.stage);
+    legend.innerHTML =
+      '<span><i class="k-out"></i>Message going out</span>' +
+      '<span><i class="k-back"></i>Answer coming back</span>' +
+      '<span><i class="k-secure"></i>Encrypted</span>';
+
+    // Explanation panel
+    var panel = this.panel = h('section', { class: 'hiw-panel', 'aria-label': 'Explanation' }, main);
     var card = this.card = h('article', { class: 'hiw-card', 'aria-live': 'polite' }, panel);
-    var meta = h('div', { class: 'hiw-meta' }, card);
-    this.chip = h('span', { class: 'hiw-chip' }, meta);
-    this.proto = h('span', { class: 'hiw-proto' }, meta);
-    this.count = h('span', { class: 'hiw-count' }, meta);
+    this.eyebrow = h('p', { class: 'hiw-eyebrow' }, card);
     this.stepTitle = h('h2', { class: 'hiw-step-title' }, card);
-    this.text = h('div', { class: 'hiw-text' }, card);
-    this.inspect = h('details', { class: 'hiw-inspect', open: '' }, card);
-    this.inspectHead = h('summary', null, this.inspect);
-    this.inspectPre = h('pre', null, this.inspect);
-
-    var controls = h('footer', { class: 'hiw-controls' }, root);
-    this.timeline = h('div', { class: 'hiw-timeline', role: 'group', 'aria-label': 'Steps' }, controls);
-    var btns = h('div', { class: 'hiw-buttons' }, controls);
-    this.btnRestart = h('button', { class: 'icon-btn', 'aria-label': 'Restart', title: 'Restart (Home)' }, btns);
-    this.btnRestart.innerHTML = UI.restart;
-    this.btnPrev = h('button', { class: 'hiw-btn', 'aria-label': 'Previous step', title: 'Previous (←)' }, btns);
-    this.btnPrev.innerHTML = UI.prev + '<span>Prev</span>';
-    this.btnPlay = h('button', { class: 'hiw-btn hiw-play', title: 'Auto-play (Space)' }, btns);
-    this.btnNext = h('button', { class: 'hiw-btn hiw-next', 'aria-label': 'Next step', title: 'Next (→)' }, btns);
-    this.btnNext.innerHTML = '<span class="hiw-fill"></span><span>Next</span>' + UI.next;
-    this.btnSpeed = h('button', { class: 'hiw-btn hiw-speed', 'aria-label': 'Playback speed', title: 'Playback speed' }, btns);
-    this.btnReplay = h('button', { class: 'icon-btn hiw-replay', 'aria-label': 'Replay this step', title: 'Replay step (R)' }, btns);
-    this.btnReplay.innerHTML = UI.replay;
-    this.fill = this.btnNext.querySelector('.hiw-fill');
-
-    // Phase chips + timeline segments
-    var seen = {};
-    this.steps.forEach(function (s, idx) {
-      var ph = self.phase(s);
-      if (!seen[s.phase]) {
-        seen[s.phase] = true;
-        var chip = h('button', { class: 'hiw-phase', 'data-phase': s.phase }, self.phaseNav);
-        chip.style.setProperty('--c', ph.color);
-        chip.textContent = ph.label;
-        chip.addEventListener('click', function () { self.go(idx, true); });
-      }
-      var seg = h('button', { class: 'hiw-seg', 'aria-label': 'Step ' + (idx + 1) + ': ' + s.title, title: (idx + 1) + '. ' + s.title }, self.timeline);
-      seg.style.setProperty('--c', ph.color);
-      seg.addEventListener('click', function () { self.go(idx, true); });
+    this.lede = h('div', { class: 'hiw-lede' }, card);
+    this.analogy = h('aside', { class: 'hiw-analogy' }, card);
+    h('p', { class: 'hiw-analogy-label' }, this.analogy).textContent = 'Why it matters';
+    this.analogyText = h('div', { class: 'hiw-analogy-text' }, this.analogy);
+    this.more = h('details', { class: 'hiw-more' }, card);
+    var sum = h('summary', null, this.more);
+    sum.innerHTML = '<span class="hiw-more-title">Under the hood</span><span class="hiw-more-hint">Protocol details, real messages, commands to try</span>' + UI.chevron;
+    this.tech = h('div', { class: 'hiw-tech' }, this.more);
+    this.inspect = h('figure', { class: 'hiw-inspect' }, this.more);
+    this.inspectCap = h('figcaption', null, this.inspect);
+    this.inspectPre = h('pre', { tabindex: '0' }, this.inspect);
+    this.tryBox = h('figure', { class: 'hiw-inspect hiw-try' }, this.more);
+    h('figcaption', null, this.tryBox).textContent = 'Try it yourself';
+    this.tryPre = h('pre', { tabindex: '0' }, this.tryBox);
+    // Open by default; remember if the reader closes it.
+    this.more.open = true;
+    try { if (localStorage.getItem('hiw-more') === '0') this.more.open = false; } catch (e) { /* no storage */ }
+    this.more.addEventListener('toggle', function () {
+      try { localStorage.setItem('hiw-more', self.more.open ? '1' : '0'); } catch (e) { /* no storage */ }
     });
+
+    // Controls
+    var ctr = h('footer', { class: 'hiw-controls' }, root);
+    this.track = h('nav', { class: 'hiw-track', 'aria-label': 'Chapters and steps' }, ctr);
+    this.segs = [];
+    this.groups = [];
+    this.chapters.forEach(function (c, ci) {
+      var g = h('div', { class: 'hiw-group' }, self.track);
+      g.style.flexGrow = c.steps.length;
+      var name = h('button', { class: 'hiw-group-name', type: 'button' }, g);
+      name.textContent = c.title;
+      name.addEventListener('click', function () { self.go(c.steps[0], true); });
+      var row = h('div', { class: 'hiw-segs' }, g);
+      c.steps.forEach(function (si) {
+        var b = h('button', { class: 'hiw-seg', type: 'button', 'aria-label': 'Step ' + (si + 1) + ': ' + self.steps[si].title, title: (si + 1) + '. ' + self.steps[si].title }, row);
+        b.addEventListener('click', function () { self.go(si, true); });
+        self.segs[si] = b;
+      });
+      self.groups[ci] = g;
+    });
+
+    var row = h('div', { class: 'hiw-row' }, ctr);
+    this.counter = h('p', { class: 'hiw-counter' }, row);
+    var mid = h('div', { class: 'hiw-transport' }, row);
+    this.btnPrev = h('button', { class: 'iconbtn hiw-prev', type: 'button', 'aria-label': 'Previous step', title: 'Previous (←)' }, mid);
+    this.btnPrev.innerHTML = UI.prev;
+    this.btnPlay = h('button', { class: 'hiw-btn hiw-play', type: 'button', title: 'Play automatically (Space)' }, mid);
+    this.btnNext = h('button', { class: 'hiw-btn hiw-next', type: 'button', title: 'Next (→)' }, mid);
+    this.btnNext.innerHTML = '<span class="hiw-fill" aria-hidden="true"></span><span class="hiw-btn-text">Next</span>' + UI.next;
+    this.fill = this.btnNext.querySelector('.hiw-fill');
+    var tools = h('div', { class: 'hiw-tools' }, row);
+    this.btnReplay = h('button', { class: 'iconbtn', type: 'button', 'aria-label': 'Replay this step', title: 'Replay step (R)' }, tools);
+    this.btnReplay.innerHTML = UI.replay;
+    this.btnSpeed = h('button', { class: 'hiw-btn hiw-speed', type: 'button', 'aria-label': 'Animation speed', title: 'Animation speed' }, tools);
 
     this.updatePlay();
     this.updateSpeed();
-  };
-
-  Player.prototype.phase = function (s) {
-    return this.phases[s.phase] || { label: s.phase || 'Step', color: '#64748b' };
   };
 
   Player.prototype.bind = function () {
     var self = this;
     this.btnPrev.addEventListener('click', function () { self.go(self.i - 1, true); });
     this.btnNext.addEventListener('click', function () { self.go(self.i + 1, true); });
-    this.btnRestart.addEventListener('click', function () { self.go(0, true); });
     this.btnReplay.addEventListener('click', function () { self.go(self.i, true); });
     this.btnPlay.addEventListener('click', function () { self.togglePlay(); });
     this.btnSpeed.addEventListener('click', function () {
@@ -192,59 +273,50 @@
     document.addEventListener('keydown', function (e) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       var tag = (e.target.tagName || '').toLowerCase();
-      if (tag === 'input' || tag === 'textarea') return;
-      var onButton = tag === 'button' || tag === 'summary';
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      var onControl = tag === 'button' || tag === 'summary' || tag === 'a';
       switch (e.key) {
-        case 'ArrowRight': case 'l': self.go(self.i + 1, true); e.preventDefault(); break;
-        case 'ArrowLeft': case 'h': self.go(self.i - 1, true); e.preventDefault(); break;
+        case 'ArrowRight': self.go(self.i + 1, true); e.preventDefault(); break;
+        case 'ArrowLeft': self.go(self.i - 1, true); e.preventDefault(); break;
         case 'Home': self.go(0, true); e.preventDefault(); break;
         case 'End': self.go(self.steps.length - 1, true); e.preventDefault(); break;
-        case 'r': self.go(self.i, true); break;
-        case ' ': case 'k':
-          if (onButton && e.key === ' ') return;
+        case 'r': case 'R': self.go(self.i, true); break;
+        case ' ':
+          if (onControl) return;
           self.togglePlay(); e.preventDefault(); break;
       }
     });
 
-    // Swipe left/right on the stage or the card.
+    // Swipe left / right on the diagram or the explanation.
     [this.stage, this.card].forEach(function (area) {
-      var sx = 0, sy = 0, tracking = false;
+      var sx = 0, sy = 0, on = false;
       area.addEventListener('touchstart', function (e) {
-        if (e.touches.length !== 1) { tracking = false; return; }
-        tracking = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+        on = e.touches.length === 1;
+        if (on) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }
       }, { passive: true });
       area.addEventListener('touchend', function (e) {
-        if (!tracking) return;
-        tracking = false;
-        var t = e.changedTouches[0];
-        var dx = t.clientX - sx, dy = t.clientY - sy;
+        if (!on) return;
+        on = false;
+        var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
         if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) self.go(self.i + (dx < 0 ? 1 : -1), true);
       }, { passive: true });
     });
 
-    if ('ResizeObserver' in window) {
-      new ResizeObserver(function () {
-        if (self.chooseLayout()) self.go(self.i, false);
-      }).observe(this.stage);
-    } else {
-      window.addEventListener('resize', function () { if (self.chooseLayout()) self.go(self.i, false); });
-    }
+    var onResize = function () { if (self.chooseLayout()) self.go(self.i, false); };
+    if ('ResizeObserver' in window) new ResizeObserver(onResize).observe(this.stage);
+    else window.addEventListener('resize', onResize);
 
     document.addEventListener('visibilitychange', function () {
       if (document.hidden && self.playing) self.togglePlay();
     });
   };
 
-  // Picks wide/tall geometry from the stage's aspect ratio. Returns true if it changed.
+  // Picks the stage geometry for the available space. Returns true if it changed.
   Player.prototype.chooseLayout = function () {
     var r = this.stage.getBoundingClientRect();
-    var name;
-    if (!r.width || !r.height) {
-      if (this.layoutName) return false;
-      name = window.innerWidth >= window.innerHeight ? 'wide' : 'tall';
-    } else {
-      name = r.width / r.height >= 1.15 ? 'wide' : 'tall';
-    }
+    var W = r.width || window.innerWidth, H = r.height || window.innerHeight * 0.5;
+    // Landscape-ish stages get the wide diagram; portrait stages (phones) get the tall one.
+    var name = W / H >= 1.05 ? 'wide' : 'tall';
     if (name === this.layoutName) return false;
     this.layoutName = name;
     this.L = this.layouts[name];
@@ -257,248 +329,363 @@
   Player.prototype.pos = function (id) {
     var a = this.flow.actors[id];
     if (!a) throw new Error('Unknown actor "' + id + '"');
-    var p = a.at[this.layoutName] || a.at.wide;
-    return [p[0], p[1]];
+    return a.at[this.layoutName] || a.at.wide;
+  };
+
+  Player.prototype.perLayout = function (v, fallback) {
+    if (v == null) return fallback;
+    if (typeof v === 'object' && !Array.isArray(v)) return v[this.layoutName] != null ? v[this.layoutName] : fallback;
+    return v;
   };
 
   Player.prototype.drawScene = function () {
-    var self = this, L = this.L, f = this.flow;
+    var self = this, L = this.L, f = this.flow, T = L.tile;
     Object.keys(this.layers).forEach(function (k) { self.layers[k].textContent = ''; });
 
-    (f.links || []).forEach(function (pair) {
-      var a = self.pos(pair[0]), b = self.pos(pair[1]);
-      el('line', { class: 'hiw-link', x1: a[0], y1: a[1], x2: b[0], y2: b[1] }, self.layers.links);
+    // Zones
+    (f.zones || []).forEach(function (z) {
+      var r = z.at[self.layoutName];
+      if (!r) return;
+      svg('rect', { class: 'hiw-zone', x: r[0], y: r[1], width: r[2], height: r[3], rx: L.radius + 4 }, self.layers.zones);
+      var t = svg('text', { class: 'hiw-zone-label', x: r[0] + L.zonePad[0], y: r[1] + L.zonePad[1], 'font-size': L.zoneFont }, self.layers.zones);
+      t.textContent = self.perLayout(z.label, z.label.wide || '');
     });
 
+    // Links
+    this.linkPts = {};
+    (f.links || []).forEach(function (lk) {
+      var a = Array.isArray(lk) ? lk[0] : lk.a, b = Array.isArray(lk) ? lk[1] : lk.b;
+      var via = Array.isArray(lk) ? null : self.perLayout(lk.via, null);
+      var pts = [self.pos(a)].concat(via || []).concat([self.pos(b)]);
+      self.linkPts[a + '|' + b] = pts;
+      svg('path', { class: 'hiw-link', d: roundedPath(pts, T * 0.6) }, self.layers.links);
+    });
+
+    // Actors
     this.actorEls = {};
     Object.keys(f.actors).forEach(function (id) {
-      var a = f.actors[id];
-      var p = self.pos(id);
-      var bw = L.box[0], bh = L.box[1];
-      var g = el('g', { class: 'hiw-actor', transform: 'translate(' + p[0] + ',' + p[1] + ')' }, self.layers.actors);
-      el('rect', { class: 'hiw-ring', x: -bw / 2 - 5, y: -bh / 2 - 5, width: bw + 10, height: bh + 10, rx: 14 }, g);
-      el('rect', { class: 'hiw-box', x: -bw / 2, y: -bh / 2, width: bw, height: bh, rx: 10 }, g);
-      var pad = L.icon * 0.45;
-      var icon = el('svg', {
-        class: 'hiw-icon', x: -bw / 2 + pad, y: -L.icon / 2, width: L.icon, height: L.icon, viewBox: '0 0 24 24',
-        fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
-      }, g);
+      var a = f.actors[id], p = self.pos(id);
+      var g = svg('g', { class: 'hiw-actor', transform: 'translate(' + p[0] + ',' + p[1] + ')' }, self.layers.actors);
+      var body = svg('g', { class: 'hiw-actor-body' }, g);
+      svg('rect', { class: 'hiw-tile', x: -T / 2, y: -T / 2, width: T, height: T, rx: L.radius }, body);
+      var is = T * 0.52;
+      var icon = svg('svg', {
+        class: 'hiw-icon', x: -is / 2, y: -is / 2, width: is, height: is, viewBox: '0 0 24 24',
+        fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+      }, body);
       icon.innerHTML = ICONS[a.icon] || ICONS.box;
-      var tx = -bw / 2 + pad * 2 + L.icon;
-      var hasSub = !!a.sub;
-      var label = el('text', { class: 'hiw-label', x: tx, y: hasSub ? -L.sub * 0.35 : 0, 'dominant-baseline': 'central', 'font-size': L.label }, g);
-      label.textContent = a.label;
-      if (hasSub) {
-        var sub = el('text', { class: 'hiw-sub', x: tx, y: L.label * 0.85, 'dominant-baseline': 'central', 'font-size': L.sub }, g);
-        sub.textContent = a.sub;
+
+      var side = self.perLayout(a.labelSide, 'below');
+      var label = self.perLayout(a.label, a.label);
+      var lt, st;
+      if (side === 'right') {
+        lt = svg('text', { class: 'hiw-label', x: T / 2 + 12, y: L.showSub && a.sub ? -3 : L.label * 0.35, 'font-size': L.label }, g);
+        if (L.showSub && a.sub) st = svg('text', { class: 'hiw-sub', x: T / 2 + 12, y: L.sub + 5, 'font-size': L.sub }, g);
+      } else {
+        lt = svg('text', { class: 'hiw-label', x: 0, y: T / 2 + L.label + 5, 'text-anchor': 'middle', 'font-size': L.label }, g);
+        if (L.showSub && a.sub) st = svg('text', { class: 'hiw-sub', x: 0, y: T / 2 + L.label + L.sub + 10, 'text-anchor': 'middle', 'font-size': L.sub }, g);
       }
-      // Keep text inside the box: ellipsize anything that would overflow.
-      var maxW = bw / 2 - tx - 8;
-      Array.prototype.forEach.call(g.querySelectorAll('text'), function (t) { fitText(t, maxW); });
-      el('title', null, g).textContent = a.label + (a.sub ? ' — ' + a.sub : '');
-      self.actorEls[id] = g;
+      lt.textContent = label;
+      if (st) { st.textContent = a.sub; fitText(st, side === 'right' ? 170 : 170); }
+      svg('title', null, g).textContent = label + (a.sub ? ': ' + a.sub : '');
+      self.actorEls[id] = { g: g, body: body, side: side };
     });
   };
+
+  /* ---------- steps ---------- */
 
   Player.prototype.go = function (i, animate) {
     if (!this.steps.length) return;
     i = clamp(i, 0, this.steps.length - 1);
     this.i = i;
-    var token = ++this.token;
-    var s = this.steps[i];
-    var ph = this.phase(s);
-    this.root.style.setProperty('--phase', ph.color);
+    var token = ++this.token, s = this.steps[i], self = this;
     this.stopDwell();
-    this.renderPanel(s, ph);
-    this.renderState(s, ph);
-    this.updateTimeline();
-    try { history.replaceState(null, '', '#step-' + (i + 1)); } catch (e) { /* file:// in some browsers */ }
+    this.renderCard(s);
+    this.renderScene(s);
+    this.updateProgress();
+    try { history.replaceState(null, '', '#step-' + (i + 1)); } catch (e) { /* ignore */ }
 
-    var self = this;
-    var run = animate ? this.playPackets(s, ph, token) : Promise.resolve();
-    run.then(function () {
+    this.busy = true;
+    var run = animate && !reducedMotion ? this.animateStep(s, token) : this.showStatic(s);
+    Promise.resolve(run).then(function () {
       if (token !== self.token) return;
+      self.busy = false;
       if (self.playing) self.dwell(token);
     });
   };
 
-  Player.prototype.renderPanel = function (s, ph) {
-    this.chip.textContent = ph.label;
-    this.proto.textContent = s.proto || '';
-    this.proto.hidden = !s.proto;
-    this.count.textContent = (this.i + 1) + ' / ' + this.steps.length;
+  Player.prototype.renderCard = function (s) {
+    var ci = this.chapterOf[this.i], c = this.chapters[ci];
+    this.eyebrow.textContent = 'Part ' + (ci + 1) + ' of ' + this.chapters.length + ' · ' + c.title;
     this.stepTitle.textContent = s.title;
-    this.text.innerHTML = s.text || '';
+    this.lede.innerHTML = s.text || '';
+    this.analogy.hidden = !s.why;
+    this.analogyText.innerHTML = s.why || '';
+    this.tryBox.hidden = !s.try;
+    if (s.try) this.tryPre.textContent = dedent(s.try);
+    var hasTech = !!(s.tech || s.inspect || s.try);
+    this.more.hidden = !hasTech;
+    this.tech.innerHTML = s.tech || '';
+    this.tech.hidden = !s.tech;
+    this.inspect.hidden = !s.inspect;
     if (s.inspect) {
-      this.inspect.hidden = false;
-      this.inspectHead.textContent = s.inspectTitle || 'Under the hood';
+      this.inspectCap.textContent = s.inspectTitle || 'What the message looks like';
       this.inspectPre.textContent = dedent(s.inspect);
-    } else {
-      this.inspect.hidden = true;
     }
     this.card.classList.remove('enter');
-    void this.card.offsetWidth; // restart the entrance animation
+    void this.card.offsetWidth;
     this.card.classList.add('enter');
     this.panel.scrollTop = 0;
-
-    var phaseKey = s.phase, nav = this.phaseNav;
-    Array.prototype.forEach.call(nav.children, function (c) {
-      var on = c.getAttribute('data-phase') === phaseKey;
-      c.classList.toggle('on', on);
-      // On phones the chips scroll sideways; keep the active one in view without scrolling the page.
-      if (on && nav.scrollWidth > nav.clientWidth) {
-        var left = c.offsetLeft - nav.offsetLeft;
-        if (left < nav.scrollLeft || left + c.offsetWidth > nav.scrollLeft + nav.clientWidth) {
-          nav.scrollTo({ left: Math.max(0, left - 16), behavior: 'smooth' });
-        }
-      }
-    });
   };
 
   Player.prototype.involved = function (s) {
     var set = {};
-    (s.actors || []).forEach(function (id) { set[id] = true; });
-    (s.work || []).forEach(function (id) { set[id] = true; });
-    (s.packets || []).forEach(function (p) { p.path.forEach(function (id) { set[id] = true; }); });
-    Object.keys(s.notes || {}).forEach(function (id) { set[id] = true; });
+    (s.actors || []).forEach(function (id) { set[id] = 1; });
+    (s.work || []).forEach(function (id) { set[id] = 1; });
+    (s.packets || []).forEach(function (p) { p.path.forEach(function (id) { set[id] = 1; }); });
+    Object.keys(s.say || {}).forEach(function (id) { set[id] = 1; });
     return set;
   };
 
-  Player.prototype.renderState = function (s, ph) {
-    var self = this, L = this.L;
-    var involved = this.involved(s);
-    var anyInvolved = Object.keys(involved).length > 0;
+  Player.prototype.renderScene = function (s) {
+    var self = this, L = this.L, T = L.tile;
+    ['trails', 'packets', 'bubbles', 'pipes'].forEach(function (k) { self.layers[k].textContent = ''; });
+
+    var inv = this.involved(s), any = Object.keys(inv).length > 0;
     var work = {};
-    (s.work || []).forEach(function (id) { work[id] = true; });
-
+    (s.work || []).forEach(function (id) { work[id] = 1; });
     Object.keys(this.actorEls).forEach(function (id) {
-      var g = self.actorEls[id];
-      g.classList.toggle('on', !!involved[id]);
-      g.classList.toggle('dim', anyInvolved && !involved[id]);
-      g.classList.toggle('working', !!work[id]);
-    });
-
-    // Trails: the route(s) this step's packets travel, with marching dashes showing direction.
-    this.layers.trails.textContent = '';
-    var segs = {};
-    (s.packets || []).forEach(function (p) {
-      for (var k = 0; k < p.path.length - 1; k++) {
-        var a = p.path[k], b = p.path[k + 1];
-        var key = a < b ? a + '|' + b : b + '|' + a;
-        if (!segs[key]) segs[key] = { a: a, b: b, both: false };
-        else if (segs[key].a !== a) segs[key].both = true;
+      var g = self.actorEls[id].g;
+      g.classList.toggle('on', !!inv[id]);
+      g.classList.toggle('dim', any && !inv[id]);
+      var old = g.querySelector('.hiw-thinking');
+      if (old) old.remove();
+      if (work[id]) {
+        var d = svg('g', { class: 'hiw-thinking', transform: 'translate(' + (T / 2 - 2) + ',' + (-T / 2 - 1) + ')' }, g);
+        var u = T / 56;
+        svg('rect', { x: -15 * u, y: -8 * u, width: 30 * u, height: 16 * u, rx: 8 * u }, d);
+        [-7, 0, 7].forEach(function (x, k) {
+          svg('circle', { cx: x * u, cy: 0, r: 2.2 * u, style: 'animation-delay:' + (k * 0.16) + 's' }, d);
+        });
       }
     });
-    Object.keys(segs).forEach(function (key) {
-      var sg = segs[key], pa = self.pos(sg.a), pb = self.pos(sg.b);
-      el('line', { class: 'hiw-trail' + (sg.both ? ' both' : ''), x1: pa[0], y1: pa[1], x2: pb[0], y2: pb[1] }, self.layers.trails);
-    });
 
-    // Notes: small tags attached to actors ("cache miss", "TTL 300s"...)
-    this.layers.notes.textContent = '';
-    Object.keys(s.notes || {}).forEach(function (id) {
-      var p = self.pos(id);
-      var below = p[1] + L.box[1] / 2 + L.pill + 6 < L.h;
-      var y = below ? p[1] + L.box[1] / 2 + L.pill / 2 + 5 : p[1] - L.box[1] / 2 - L.pill / 2 - 5;
-      var g = el('g', { class: 'hiw-note', transform: 'translate(' + p[0] + ',' + y + ')' }, self.layers.notes);
-      var bg = el('rect', { height: L.pill, y: -L.pill / 2, rx: L.pill / 2 }, g);
-      var t = el('text', { 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': L.pillFont }, g);
-      t.textContent = s.notes[id];
-      var w = (t.getComputedTextLength() || s.notes[id].length * L.pillFont * 0.6) + L.pillFont * 1.3;
-      bg.setAttribute('width', w);
-      bg.setAttribute('x', -w / 2);
-    });
+    // Pipes: an open connection, or the encrypted tunnel inside it.
+    if (s.pipe) {
+      var route = s.pipe.route, kind = s.pipe.kind || 'tcp';
+      for (var k = 0; k < route.length - 1; k++) {
+        var d = roundedPath(this.hopPoints(route[k], route[k + 1]), T * 0.6);
+        if (kind === 'tls') svg('path', { class: 'hiw-pipe-halo', d: d, 'stroke-width': T * 0.42 }, this.layers.pipes);
+        svg('path', { class: 'hiw-pipe ' + kind, d: d }, this.layers.pipes);
+      }
+      if (kind === 'tls') {
+        // Put the padlock badge in the middle of the longest hop, away from labels.
+        var best = null, bestLen = -1;
+        for (var q = 0; q < route.length - 1; q++) {
+          var probe = svg('path', { d: roundedPath(this.hopPoints(route[q], route[q + 1]), T * 0.6) }, this.layers.pipes);
+          var pl = probe.getTotalLength();
+          if (pl > bestLen) { bestLen = pl; best = probe.getPointAtLength(pl / 2); }
+          probe.remove();
+        }
+        var mid = best;
+        var badge = svg('g', { class: 'hiw-pipe-badge', transform: 'translate(' + mid.x + ',' + mid.y + ')' }, this.layers.pipes);
+        var r = T * 0.22;
+        svg('circle', { r: r }, badge);
+        var lk = svg('svg', { x: -r * 0.62, y: -r * 0.66, width: r * 1.24, height: r * 1.24, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.6, 'stroke-linecap': 'round' }, badge);
+        lk.innerHTML = GLYPH.lock;
+      }
+    }
   };
 
-  Player.prototype.hopMs = function () {
-    return (reducedMotion ? 120 : HOP_MS) / SPEEDS[this.speedIdx];
-  };
-
-  Player.prototype.playPackets = function (s, ph, token) {
+  // Final frame of a step without animation (used for resize and reduced motion).
+  Player.prototype.showStatic = function (s) {
     var self = this;
-    var list = s.packets || [];
-    this.layers.packets.textContent = '';
-    if (!list.length) return Promise.resolve();
-    this.animating = true;
-    var chain = Promise.resolve();
-    var groups = [];
-    list.forEach(function (p) {
-      if (p.parallel && groups.length) groups[groups.length - 1].push(p);
-      else groups.push([p]);
+    (s.packets || []).forEach(function (p) {
+      for (var k = 0; k < p.path.length - 1; k++) {
+        var path = svg('path', { class: 'hiw-trail ' + (p.reply ? 'back' : 'out'), d: roundedPath(self.hopPoints(p.path[k], p.path[k + 1]), self.L.tile * 0.6) }, self.layers.trails);
+        path.classList.add('settled');
+      }
     });
+    var say = s.say || {};
+    Object.keys(say).forEach(function (id) { self.showBubble(id, say[id]); });
+  };
+
+  Player.prototype.hopPoints = function (a, b) {
+    var f = this.linkPts[a + '|' + b];
+    if (f) return f;
+    var r = this.linkPts[b + '|' + a];
+    if (r) return r.slice().reverse();
+    return [this.pos(a), this.pos(b)];
+  };
+
+  Player.prototype.animateStep = function (s, token) {
+    var self = this, packets = s.packets || [], say = s.say || {};
+
+    // A speech bubble appears when a message arrives at that actor; otherwise right away.
+    var after = {}, now = [];
+    Object.keys(say).forEach(function (id) {
+      var idx = -1;
+      packets.forEach(function (p, k) { if (idx < 0 && p.path[p.path.length - 1] === id) idx = k; });
+      if (idx >= 0) (after[idx] = after[idx] || []).push(id);
+      else now.push(id);
+    });
+    now.forEach(function (id) { self.showBubble(id, say[id]); });
+    if (!packets.length) return wait(300);
+
+    var groups = [];
+    packets.forEach(function (p, k) {
+      if (p.parallel && groups.length) groups[groups.length - 1].push(k);
+      else groups.push([k]);
+    });
+
+    var chain = wait((now.length ? 650 : 250) / this.speed());
     groups.forEach(function (group, gi) {
       chain = chain.then(function () {
         if (token !== self.token) return;
-        var pause = gi === 0 ? 150 : 220;
-        return self.wait(pause / SPEEDS[self.speedIdx]).then(function () {
-          if (token !== self.token) return;
-          return Promise.all(group.map(function (p, pi) {
-            return self.wait((p.delay || pi * 120) / SPEEDS[self.speedIdx]).then(function () {
-              return self.movePacket(p, p.color || ph.color, token);
-            });
-          }));
+        return Promise.all(group.map(function (k, gk) {
+          return wait(gk * 260 / self.speed()).then(function () {
+            return self.sendPacket(packets[k], token);
+          }).then(function () {
+            if (token !== self.token) return;
+            (after[k] || []).forEach(function (id) { self.showBubble(id, say[id]); });
+          });
+        })).then(function () {
+          if (token === self.token && gi < groups.length - 1) return wait(380 / self.speed());
         });
       });
     });
-    return chain.then(function () { if (token === self.token) self.animating = false; });
+    return chain;
   };
 
-  Player.prototype.wait = function (ms) {
-    return new Promise(function (r) { setTimeout(r, ms); });
+  Player.prototype.speed = function () { return SPEEDS[this.speedIdx]; };
+
+  Player.prototype.makePacket = function (p) {
+    var L = this.L, P = L.pill;
+    var g = svg('g', { class: 'hiw-packet ' + (p.reply ? 'back' : 'out') + (p.locked ? ' locked' : '') }, this.layers.packets);
+    var body = svg('g', { class: 'hiw-packet-body' }, g);
+    var rect = svg('rect', { class: 'hiw-packet-bg', height: P, y: -P / 2, rx: P / 2 }, body);
+    var gs = P * 0.56;
+    var glyph = svg('svg', { class: 'hiw-packet-glyph', width: gs, height: gs, y: -gs / 2, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, body);
+    glyph.innerHTML = p.locked ? GLYPH.lock : GLYPH.envelope;
+    var t = svg('text', { class: 'hiw-packet-text', 'font-size': L.pillFont, y: L.pillFont * 0.36 }, body);
+    t.textContent = p.label || '';
+    var tw = p.label ? t.getComputedTextLength() || p.label.length * L.pillFont * 0.6 : 0;
+    var padL = P * 0.32, gap = P * 0.2, padR = P * 0.42;
+    var w = padL + gs + (tw ? gap + tw : 0) + (tw ? padR : padL);
+    rect.setAttribute('x', -w / 2);
+    rect.setAttribute('width', w);
+    glyph.setAttribute('x', -w / 2 + padL);
+    t.setAttribute('x', -w / 2 + padL + gs + gap);
+    var start = this.pos(p.path[0]);
+    g.setAttribute('transform', 'translate(' + start[0] + ',' + start[1] + ')');
+    return g;
   };
 
-  Player.prototype.movePacket = function (p, color, token) {
-    var self = this, L = this.L;
-    return new Promise(function (resolve) {
-      if (token !== self.token) return resolve();
-      var pts = p.path.map(function (id) { return self.pos(id); });
-      var g = el('g', { class: 'hiw-packet' }, self.layers.packets);
-      el('circle', { r: L.packet, fill: color }, g);
-      if (p.label) {
-        var pill = el('g', { transform: 'translate(0,' + -(L.packet + L.pill / 2 + 3) + ')' }, g);
-        var bg = el('rect', { height: L.pill, y: -L.pill / 2, rx: L.pill / 2, fill: color }, pill);
-        var t = el('text', { 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': L.pillFont }, pill);
-        t.textContent = p.label;
-        var w = (t.getComputedTextLength() || p.label.length * L.pillFont * 0.6) + L.pillFont * 1.3;
-        bg.setAttribute('width', w);
-        bg.setAttribute('x', -w / 2);
-      }
-      var hops = pts.length - 1;
-      var total = Math.max(1, hops * self.hopMs());
-      var start = performance.now();
-      g.setAttribute('transform', 'translate(' + pts[0][0] + ',' + pts[0][1] + ')');
-      var finished = false;
-      // Fallback in case rAF is throttled (background tab): the flow must never stall.
-      var guard = setTimeout(function () { tick(start + total); }, total + 250);
-
-      function tick(now) {
-        if (finished) return;
-        if (token !== self.token) { finished = true; clearTimeout(guard); g.remove(); return resolve(); }
-        var k = Math.min((now - start) / total, 1);
-        var prog = k * hops;
-        var hop = Math.min(Math.floor(prog), hops - 1);
-        var t = ease(prog - hop);
-        var a = pts[hop], b = pts[hop + 1];
-        g.setAttribute('transform', 'translate(' + (a[0] + (b[0] - a[0]) * t) + ',' + (a[1] + (b[1] - a[1]) * t) + ')');
-        if (k < 1) requestAnimationFrame(tick);
-        else {
-          finished = true;
-          clearTimeout(guard);
-          g.classList.add('done');
-          setTimeout(function () { g.remove(); }, 400);
-          resolve();
-        }
-      }
-      requestAnimationFrame(tick);
+  Player.prototype.sendPacket = function (p, token) {
+    var self = this;
+    if (token !== this.token) return Promise.resolve();
+    var g = this.makePacket(p);
+    var cls = p.reply ? 'back' : 'out';
+    var chain = Promise.resolve();
+    for (var k = 0; k < p.path.length - 1; k++) {
+      (function (a, b, last) {
+        chain = chain.then(function () {
+          if (token !== self.token) return;
+          return self.moveAlong(self.hopPoints(a, b), g, cls, token).then(function () {
+            if (token !== self.token) return;
+            self.ping(b);
+            if (!last) return wait(160 / self.speed());
+          });
+        });
+      })(p.path[k], p.path[k + 1], k === p.path.length - 2);
+    }
+    return chain.then(function () {
+      g.classList.add('landed');
+      setTimeout(function () { g.remove(); }, 450);
     });
   };
 
-  // Auto-play: wait long enough to read the step, then advance. The Next button fills up as a countdown.
+  Player.prototype.moveAlong = function (pts, g, cls, token) {
+    var self = this, L = this.L;
+    return new Promise(function (resolve) {
+      var path = svg('path', { class: 'hiw-trail ' + cls, d: roundedPath(pts, L.tile * 0.6) }, self.layers.trails);
+      var len = path.getTotalLength() || 1;
+      path.style.strokeDasharray = len + ' ' + len;
+      path.style.strokeDashoffset = len;
+      // Duration grows with distance, normalised so both layouts feel the same.
+      var ms = (420 + len * (1000 / L.w) * 1.5) / self.speed();
+      var start = performance.now(), done = false;
+      var guard = setTimeout(function () { frame(start + ms); }, ms + 300);
+      function frame(now) {
+        if (done) return;
+        if (token !== self.token) { done = true; clearTimeout(guard); return resolve(); }
+        var t = Math.min((now - start) / ms, 1), e = easeInOut(t);
+        var pt = path.getPointAtLength(e * len);
+        g.setAttribute('transform', 'translate(' + pt.x.toFixed(2) + ',' + pt.y.toFixed(2) + ')');
+        path.style.strokeDashoffset = (len * (1 - e)).toFixed(2);
+        if (t < 1) requestAnimationFrame(frame);
+        else { done = true; clearTimeout(guard); path.classList.add('settled'); resolve(); }
+      }
+      requestAnimationFrame(frame);
+    });
+  };
+
+  Player.prototype.ping = function (id) {
+    var a = this.actorEls[id];
+    if (!a) return;
+    a.body.classList.remove('ping');
+    void a.body.getBoundingClientRect();
+    a.body.classList.add('ping');
+  };
+
+  Player.prototype.showBubble = function (id, text) {
+    var L = this.L, T = L.tile, p = this.pos(id), a = this.flow.actors[id];
+    var fs = L.bubble, lh = fs * 1.32, padX = fs * 0.85, padY = fs * 0.62;
+    var lines = wrapWords(text, L.bubbleChars);
+
+    var g = svg('g', { class: 'hiw-bubble' }, this.layers.bubbles);
+    var body = svg('g', { class: 'hiw-bubble-body' }, g);
+    var rect = svg('rect', { rx: fs * 0.75 }, body);
+    var tail = svg('path', { class: 'hiw-bubble-tail' }, body);
+    var tx = svg('text', { 'font-size': fs }, body);
+    lines.forEach(function (ln, k) {
+      var ts = svg('tspan', { x: padX, y: padY + fs * 0.8 + k * lh }, tx);
+      ts.textContent = ln;
+    });
+    var w = Math.ceil(tx.getBBox().width + padX * 2);
+    var hh = Math.ceil(padY * 2 + fs * 0.95 + (lines.length - 1) * lh);
+    rect.setAttribute('width', w);
+    rect.setAttribute('height', hh);
+
+    var side = this.perLayout(a.bubble, 'above');
+    var labelBlock = this.actorEls[id].side === 'right' ? 0 : L.label + 8 + (L.showSub && a.sub ? L.sub + 6 : 0);
+    var bx, by;
+    if (side === 'above') {
+      by = p[1] - T / 2 - 12 - hh;
+      if (by < 4) side = 'below';
+    }
+    if (side === 'below') by = p[1] + T / 2 + labelBlock + 10;
+    if (side === 'above' || side === 'below') bx = clamp(p[0] - w / 2, 4, L.w - 4 - w);
+    if (side === 'left') { bx = p[0] - T / 2 - 14 - w; by = p[1] - hh / 2; }
+    if (side === 'right') { bx = p[0] + T / 2 + 14; by = p[1] - hh / 2; }
+    by = clamp(by, 4, L.h - 4 - hh);
+
+    var k = fs * 0.55, d;
+    if (side === 'above') { var cx = clamp(p[0] - bx, 14, w - 14); d = 'M' + (cx - k) + ',' + (hh - 1) + ' L' + cx + ',' + (hh + k * 1.2) + ' L' + (cx + k) + ',' + (hh - 1); }
+    else if (side === 'below') { var cx2 = clamp(p[0] - bx, 14, w - 14); d = 'M' + (cx2 - k) + ',1 L' + cx2 + ',' + (-k * 1.2) + ' L' + (cx2 + k) + ',1'; }
+    else if (side === 'left') { d = 'M' + (w - 1) + ',' + (hh / 2 - k) + ' L' + (w + k * 1.2) + ',' + hh / 2 + ' L' + (w - 1) + ',' + (hh / 2 + k); }
+    else { d = 'M1,' + (hh / 2 - k) + ' L' + (-k * 1.2) + ',' + hh / 2 + ' L1,' + (hh / 2 + k); }
+    tail.setAttribute('d', d);
+    g.setAttribute('transform', 'translate(' + bx + ',' + by + ')');
+    body.setAttribute('data-side', side);
+  };
+
+  /* ---------- auto-play ---------- */
+
   Player.prototype.dwell = function (token) {
-    var self = this;
-    var s = this.steps[this.i];
-    var n = words(s.text) + words(s.title) + (s.inspect ? 6 : 0);
-    var ms = clamp(1400 + n * 190, 3000, 14000) / SPEEDS[this.speedIdx];
+    var self = this, s = this.steps[this.i];
+    var n = countWords(s.text) + countWords(s.why) + countWords(s.title);
+    var ms = clamp(1800 + n * 210, 4000, 16000) / this.speed();
     var fill = this.fill;
     fill.style.transition = 'none';
     fill.style.transform = 'scaleX(0)';
@@ -514,7 +701,6 @@
 
   Player.prototype.stopDwell = function () {
     clearTimeout(this.dwellTimer);
-    this.dwellTimer = null;
     this.fill.style.transition = 'none';
     this.fill.style.transform = 'scaleX(0)';
   };
@@ -524,13 +710,13 @@
     this.updatePlay();
     if (!this.playing) { this.stopDwell(); return; }
     if (this.i >= this.steps.length - 1) { this.go(0, true); return; }
-    if (!this.animating) this.dwell(this.token);
+    if (!this.busy) this.dwell(this.token);
   };
 
   Player.prototype.updatePlay = function () {
-    this.btnPlay.innerHTML = (this.playing ? UI.pause : UI.play) + '<span>' + (this.playing ? 'Pause' : 'Auto-play') + '</span>';
+    this.btnPlay.innerHTML = (this.playing ? UI.pause : UI.play) + '<span class="hiw-btn-text">' + (this.playing ? 'Pause' : 'Play') + '</span>';
     this.btnPlay.setAttribute('aria-pressed', this.playing ? 'true' : 'false');
-    this.btnPlay.setAttribute('aria-label', this.playing ? 'Pause auto-play' : 'Start auto-play');
+    this.btnPlay.setAttribute('aria-label', this.playing ? 'Pause' : 'Play all steps automatically');
     this.root.classList.toggle('playing', this.playing);
   };
 
@@ -538,13 +724,18 @@
     this.btnSpeed.textContent = SPEEDS[this.speedIdx] + '×';
   };
 
-  Player.prototype.updateTimeline = function () {
-    var i = this.i;
-    Array.prototype.forEach.call(this.timeline.children, function (seg, idx) {
-      seg.classList.toggle('done', idx < i);
-      seg.classList.toggle('current', idx === i);
-      if (idx === i) seg.setAttribute('aria-current', 'step'); else seg.removeAttribute('aria-current');
+  Player.prototype.updateProgress = function () {
+    var i = this.i, ci = this.chapterOf[i];
+    this.segs.forEach(function (b, idx) {
+      b.classList.toggle('done', idx < i);
+      b.classList.toggle('current', idx === i);
+      if (idx === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
     });
+    this.groups.forEach(function (g, gi) {
+      g.classList.toggle('current', gi === ci);
+      g.classList.toggle('done', gi < ci);
+    });
+    this.counter.innerHTML = '<span class="long">Step </span>' + (i + 1) + '<span class="long"> of </span><span class="short"> / </span>' + this.steps.length;
     this.btnPrev.disabled = i === 0;
     this.btnNext.disabled = i === this.steps.length - 1;
   };
@@ -552,9 +743,21 @@
   window.HowItWorks = {
     icons: ICONS,
     mount: function (flow) {
-      var start = function () { window.HowItWorks.player = new Player(flow); };
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
-      else start();
+      var started = false;
+      var start = function () {
+        if (started) return;
+        started = true;
+        window.HowItWorks.player = new Player(flow);
+      };
+      var ready = function () {
+        // Text is measured for packet labels and bubbles, so wait for the web fonts (briefly).
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(start);
+          setTimeout(start, 1500);
+        } else start();
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready);
+      else ready();
     }
   };
 })();

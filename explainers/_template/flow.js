@@ -1,55 +1,60 @@
 /*
  * Starter explainer. Copy this folder to explainers/<your-slug>/ and edit.
- * Full format reference: README.md → "Flow format".
+ * Format reference: README.md → "Flow format".
  */
 HowItWorks.mount({
-  title: 'Template: client calls an API',
-  subtitle: 'Copy this folder to start a new explainer',
+  title: 'Template: an app asks a server for your profile',
+  shortTitle: 'Template',
 
-  phases: {
-    request:  { label: 'Request',  color: '#2563eb' },
-    work:     { label: 'Server',   color: '#b91c1c' },
-    response: { label: 'Response', color: '#047857' }
-  },
+  chapters: [
+    { id: 'ask', title: 'Ask' },
+    { id: 'answer', title: 'Answer' }
+  ],
 
-  // wide: 1000×560 stage (desktop / landscape). tall: 400×420 stage (phones).
+  // [x, y, w, h]. wide stage is 1000×572, tall (phones) is 400×420.
+  zones: [
+    { id: 'you', label: 'YOUR PHONE', at: { wide: [40, 160, 260, 260], tall: [6, 6, 388, 120] } },
+    { id: 'cloud', label: 'THE COMPANY’S SERVERS', at: { wide: [380, 160, 580, 260], tall: [6, 140, 388, 270] } }
+  ],
+
   actors: {
-    client: { label: 'Client', sub: 'mobile app', icon: 'phone',  at: { wide: [150, 280], tall: [70, 80] } },
-    api:    { label: 'API',    sub: 'REST',       icon: 'server', at: { wide: [500, 280], tall: [200, 210] } },
-    db:     { label: 'Database', sub: 'Postgres', icon: 'db',     at: { wide: [850, 280], tall: [330, 340] } }
+    app: { label: 'App', sub: 'on your phone', icon: 'phone', at: { wide: [170, 290], tall: [200, 62] } },
+    api: { label: 'API server', sub: 'answers requests', icon: 'server', at: { wide: [520, 290], tall: [200, 220] } },
+    db:  { label: 'Database', sub: 'stores profiles', icon: 'db', at: { wide: [820, 290], tall: [200, 340] } }
   },
 
-  links: [['client', 'api'], ['api', 'db']],
+  links: [['app', 'api'], ['api', 'db']],
 
   steps: [
     {
-      phase: 'request',
-      title: 'The client sends a request',
-      proto: 'HTTPS',
-      packets: [{ path: ['client', 'api'], label: 'GET /users/42' }],
-      text: '<p>Explain what happens in plain language. <code>HTML</code> is allowed.</p>',
-      inspectTitle: 'Request',
+      chapter: 'ask',
+      title: 'The app asks for your profile',
+      packets: [{ path: ['app', 'api'], label: 'My profile, please' }],
+      text: '<p>Plain-language explanation first. Short sentences. <b>Bold</b> the key idea.</p>',
+      why: '<p>The practical consequence: performance, security, or a common bug.</p>',
+      tech: '<p>Protocol-level depth for the "Under the hood" section.</p>',
+      try: 'curl -v https://api.example.com/users/42',
+      inspectTitle: 'The request',
       inspect: `
-        GET /users/42 HTTP/1.1
+        GET /users/42
         Host: api.example.com`
     },
     {
-      phase: 'work',
-      title: 'The API reads from the database',
-      proto: 'SQL',
+      chapter: 'answer',
+      title: 'The server looks it up',
       packets: [
-        { path: ['api', 'db'], label: 'SELECT …' },
-        { path: ['db', 'api'], label: '1 row' }
+        { path: ['api', 'db'], label: 'Find user 42' },
+        { path: ['db', 'api'], label: 'Found', reply: true }
       ],
       work: ['api'],
-      text: '<p>Packets play in order. Add <code>parallel: true</code> to start one together with the previous.</p>'
+      text: '<p>Packets play in order. Add <code>parallel: true</code> to send one together with the previous one.</p>'
     },
     {
-      phase: 'response',
-      title: 'The client gets a response',
-      packets: [{ path: ['api', 'client'], label: '200 OK' }],
-      notes: { client: 'rendered' },
-      text: '<p><code>notes</code> attach small tags to actors. <code>work</code> shows a spinning ring.</p>'
+      chapter: 'answer',
+      title: 'The app shows your profile',
+      packets: [{ path: ['api', 'app'], label: 'Here you go', reply: true }],
+      say: { app: 'Hello, Asha!' },
+      text: '<p><code>say</code> adds a speech bubble. It appears when a message arrives at that actor.</p>'
     }
   ]
 });

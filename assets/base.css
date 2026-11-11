@@ -1,50 +1,64 @@
-/* Shared design tokens for the gallery and the player. */
+/*
+ * How It Works — design tokens.
+ * Direction: a technical field manual. Cool paper, navy ink, and two signal colours
+ * that carry meaning: cobalt for messages going out, amber for answers coming back.
+ * Green is reserved for "encrypted". Nothing else gets colour.
+ */
 :root {
-  --bg: #f6f6f3;
-  --surface: #ffffff;
-  --surface-2: #f0f0ec;
-  --text: #1b1d21;
-  --muted: #5d646e;
-  --border: #e2e2dd;
-  --accent: #2563eb;
-  --node-fill: #ffffff;
-  --node-stroke: #c9cdd3;
-  --link: #d3d6db;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 6px 20px rgba(0, 0, 0, .05);
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --bg: #eef1f5;          /* stage / page ground, cool paper */
+  --sheet: #ffffff;       /* panels and nodes */
+  --ink: #111827;         /* primary text, active strokes */
+  --ink-2: #485263;       /* secondary text */
+  --ink-3: #7b8697;       /* captions, idle icons */
+  --rule: #d5dbe4;        /* hairlines, idle links */
+  --zone: #f7f9fb;        /* zone fill on the stage */
+  --out: #1f56d6;         /* outgoing message */
+  --on-out: #ffffff;
+  --back: #e09a12;        /* returning answer */
+  --on-back: #221600;
+  --secure: #0d8a67;      /* encrypted tunnel */
+  --focus: #1f56d6;
+
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1115;
-    --surface: #161920;
-    --surface-2: #1e222b;
-    --text: #e8eaed;
-    --muted: #9aa3ae;
-    --border: #2a2f3a;
-    --accent: #6b9bff;
-    --node-fill: #1a1e27;
-    --node-stroke: #3a414e;
-    --link: #2e3440;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .3);
+    --bg: #0c1016;
+    --sheet: #141a23;
+    --ink: #e8ecf2;
+    --ink-2: #a7b1bf;
+    --ink-3: #6f7a8b;
+    --rule: #263040;
+    --zone: #10151d;
+    --out: #6b98ff;
+    --on-out: #071430;
+    --back: #f2b441;
+    --on-back: #221600;
+    --secure: #34c495;
+    --focus: #6b98ff;
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0f1115;
-  --surface: #161920;
-  --surface-2: #1e222b;
-  --text: #e8eaed;
-  --muted: #9aa3ae;
-  --border: #2a2f3a;
-  --accent: #6b9bff;
-  --node-fill: #1a1e27;
-  --node-stroke: #3a414e;
-  --link: #2e3440;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .3);
+  --bg: #0c1016;
+  --sheet: #141a23;
+  --ink: #e8ecf2;
+  --ink-2: #a7b1bf;
+  --ink-3: #6f7a8b;
+  --rule: #263040;
+  --zone: #10151d;
+  --out: #6b98ff;
+  --on-out: #071430;
+  --back: #f2b441;
+  --on-back: #221600;
+  --secure: #34c495;
+  --focus: #6b98ff;
   color-scheme: dark;
 }
 
@@ -53,28 +67,40 @@
 html, body {
   margin: 0;
   background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
 }
 
-a { color: var(--accent); }
-
+a { color: inherit; }
 button { font: inherit; color: inherit; }
 
-.icon-btn {
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+
+.iconbtn {
   display: inline-grid;
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--sheet);
+  color: var(--ink);
   cursor: pointer;
   flex: none;
+  transition: border-color .15s, background-color .15s;
 }
-.icon-btn:hover { background: var(--surface-2); }
-.icon-btn svg { width: 18px; height: 18px; }
+.iconbtn:hover { border-color: var(--ink-3); }
+.iconbtn svg { width: 18px; height: 18px; }
 
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Theme toggle shows a moon in light mode and a sun in dark mode. */
+.theme-sun { display: none; }
+:root[data-theme="dark"] .theme-sun { display: block; }
+:root[data-theme="dark"] .theme-moon { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-sun { display: block; }
+  :root:not([data-theme="light"]) .theme-moon { display: none; }
+}

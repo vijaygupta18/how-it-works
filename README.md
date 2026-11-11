@@ -44,49 +44,54 @@ explainers/_template/    copy this to start a new one
 ```js
 HowItWorks.mount({
   title: 'Shown in the header',
-  subtitle: 'Optional, shown under the title on wide screens',
+  shortTitle: 'Used in the browser tab',
 
-  // Phases group steps. They become the colored chips and timeline colors.
-  phases: {
-    dns: { label: 'DNS', color: '#7c3aed' }
-  },
+  // Big parts of the story. They label the progress bar.
+  chapters: [{ id: 'dns', title: 'DNS lookup' }],
 
-  // Boxes on the stage. Give a position for both layouts:
-  //   wide: [x, y] on a 1000 × 560 stage (desktop, landscape)
-  //   tall: [x, y] on a 400 × 420 stage (phones in portrait)
-  // Box sizes: wide 150 × 60, tall 116 × 44, positions are box centers.
+  // Labelled areas on the stage: [x, y, w, h].
+  // wide = 1000 × 572 stage (desktop, landscape), tall = 400 × 420 stage (phones).
+  zones: [{ id: 'lan', label: { wide: 'YOUR NETWORK · LAN', tall: 'YOUR NETWORK' },
+            at: { wide: [16, 70, 300, 470], tall: [6, 6, 388, 124] } }],
+
+  // Things that talk. Positions are tile centres. Tiles: 56px wide layout, 40px tall layout.
   actors: {
-    browser: { label: 'Browser', sub: 'Chrome', icon: 'browser', at: { wide: [110, 190], tall: [70, 40] } }
+    browser: { label: 'Browser', sub: 'Chrome, Safari', icon: 'browser',
+               at: { wide: [106, 190], tall: [70, 52] },
+               labelSide: { wide: 'right' },   // optional: label beside the tile
+               bubble: { wide: 'left' } }      // optional: where speech bubbles go
   },
 
-  // Faint lines always drawn between actors.
+  // Roads between actors. Use { a, b, via: { tall: [[x, y], ...] } } to bend one around others.
   links: [['browser', 'router']],
 
-  steps: [
-    {
-      phase: 'dns',                       // key from phases
-      title: 'Step title',
-      proto: 'UDP :53',                   // optional badge
-      text: '<p>HTML explanation.</p>',   // <p>, <ul>, <code>, <b>, <p class="aside">
-      packets: [                          // animated, in order
-        { path: ['os', 'router', 'resolver'], label: 'A? example.com' },
-        { path: ['x', 'y'], label: 'starts with previous', parallel: true }
-      ],
-      work: ['resolver'],                 // spinning "processing" ring
-      notes: { resolver: 'cache miss' },  // small tag under (or above) an actor
-      actors: ['db'],                     // extra actors to highlight
-      inspectTitle: 'DNS query',          // optional collapsible code panel
-      inspect: `multi-line text, indentation is trimmed`
-    }
-  ]
+  steps: [{
+    chapter: 'dns',
+    title: 'Query the recursive resolver',
+    proto: 'DNS · UDP :53',                         // optional badge
+    text: '<p>Plain explanation, using the real terms.</p>',
+    why: '<p>Practical consequence: performance, security, a common bug.</p>',
+    tech: '<ul><li>Protocol-level depth (shown under "Under the hood").</li></ul>',
+    inspectTitle: 'Query', inspect: `the actual message, indentation is trimmed`,
+    try: `dig example.com A`,                       // a command readers can run
+    packets: [
+      { path: ['os', 'router', 'resolver'], label: 'A? example.com' },
+      { path: ['resolver', 'os'], label: 'A 198.51.100.20', reply: true },   // amber
+      { path: ['a', 'b'], label: 'encrypted', locked: true, parallel: true }  // padlock, sent together
+    ],
+    say: { resolver: 'Cache miss. Resolving.' },     // speech bubble, shown when a packet arrives
+    work: ['resolver'],                              // "busy" indicator
+    pipe: { route: ['browser', 'router', 'cdn'], kind: 'tcp' | 'tls' },  // open connection / encrypted tunnel
+    actors: ['db']                                   // extra actors to highlight
+  }]
 });
 ```
 
-Actors that a step doesn't touch are dimmed automatically, so each step's focus is clear.
+Actors a step doesn't touch are dimmed. Colours carry meaning everywhere: blue = request, amber = response, green = encrypted.
 
-**Icons:** `browser`, `os`, `router`, `globe`, `server`, `db`, `cloud`, `lb`, `user`, `lock`, `phone`, `box`, `key`, `queue`. Add more in the `ICONS` map at the top of `engine/player.js`.
+**Icons:** `browser`, `laptop`, `os`, `router`, `book`, `globe`, `tree`, `server`, `edge`, `db`, `cloud`, `lb`, `user`, `phone`, `lock`, `key`, `queue`, `box`. Add more in `ICONS` at the top of `engine/player.js`.
 
-**Optional:** `layouts` overrides the stage sizes, e.g. `layouts: { wide: { w: 1200, h: 600, box: [150, 60], label: 14, sub: 11, icon: 22, packet: 7, pill: 22, pillFont: 12 } }`.
+**Writing steps:** lead with what happens in plain language and the correct terms, keep paragraphs short, put depth in `tech`, the real message in `inspect`, and something runnable in `try`.
 
 ## Controls
 
@@ -96,7 +101,7 @@ Actors that a step doesn't touch are dimmed automatically, so each step's focus 
 | Auto-play / pause | `Space` | Auto-play button |
 | Replay current step | `R` | |
 | First / last step | `Home` / `End` | Restart button |
-| Jump | Click a phase chip or timeline segment | Same |
+| Jump | Click a chapter name or progress segment | Tap a progress segment |
 
 Every step has its own URL (`#step-7`), so you can link straight to it.
 
